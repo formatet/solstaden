@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from app.routes import places, sun
 import os
 
@@ -23,6 +22,5 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/", include_in_schema=False)
-def index():
-    return FileResponse(os.path.join(os.path.dirname(__file__), "static/index.html"))
+# Catch-all: serve the SvelteKit static build (html=True = SPA fallback)
+app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static"), html=True), name="frontend")
