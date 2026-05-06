@@ -35,15 +35,26 @@ def list_places(db: Session = Depends(get_db)):
     rows = db.execute(text("""
         SELECT
             p.id, p.name, p.slug, p.category, p.address, p.url, p.active, p.osm_id,
+            COALESCE(p.approved, TRUE) AS approved,
+            p.submitted_by,
             t.id AS terrace_id,
             ST_AsGeoJSON(t.geom)::json AS terrace_geom,
             ST_X(ST_Centroid(t.geom)) AS lng,
             ST_Y(ST_Centroid(t.geom)) AS lat
         FROM places p
         LEFT JOIN terraces t ON t.place_id = p.id
-        ORDER BY p.active DESC, p.name
+        ORDER BY COALESCE(p.approved, TRUE) ASC, p.active DESC, p.name
     """)).mappings().all()
     return [dict(r) for r in rows]
+
+
+@router.post("/places/{place_id}/approve")
+def approve_place(place_id: int, db: Session = Depends(get_db)):
+    db.execute(text("""
+        UPDATE places SET active = TRUE, approved = TRUE WHERE id = :id
+    """), {"id": place_id})
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/places", status_code=201)
