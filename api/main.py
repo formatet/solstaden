@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes import places, sun
+from app.routes import places, sun, admin
 import os
 
 app = FastAPI(title="Solstaden API", version="0.1.0")
@@ -15,6 +15,7 @@ app.add_middleware(
 
 app.include_router(places.router, prefix="/api/places", tags=["places"])
 app.include_router(sun.router, prefix="/api/sun", tags=["sun"])
+app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 
 
 @app.get("/health")

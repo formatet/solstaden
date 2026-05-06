@@ -38,6 +38,7 @@ out geom;
         method="POST",
     )
     req.add_header("Content-Type", "application/x-www-form-urlencoded")
+    req.add_header("User-Agent", "solstaden-byggnadssimport/1.0 (byggnad import, kontakt via formatet.se)")
     with urllib.request.urlopen(req, timeout=120) as resp:
         return json.loads(resp.read())
 
