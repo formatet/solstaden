@@ -26,7 +26,7 @@ API:t startar på `http://localhost:8000`, frontend på `http://localhost:5173`.
 
 - **Frontend**: SvelteKit + MapLibre GL JS
 - **Backend**: FastAPI + PostgreSQL/PostGIS
-- **Sol-sim**: pysolar + shapely
+- **Sol-sim**: custom solpositionsberäkning + shapely + pyproj
 - **Drift**: Docker / Proxmox LXC
 
 ## Data
@@ -42,4 +42,4 @@ Platser kan läggas till via admin-gränssnittet eller som PR mot `db/seed/`.
 
 ## Licens
 
-MIT — koden är fri. Geodata från Göteborgs Stad har egna licensvillkor.
+GPLv3 — se LICENSE-filen. Geodata från Göteborgs Stad har egna licensvillkor.

@@ -26,12 +26,15 @@ def list_places(
             p.category,
             p.address,
             p.url,
+            MIN(t.id) AS terrace_id,
+            ST_X(ST_Centroid(ST_Collect(t.geom))) AS lng,
+            ST_Y(ST_Centroid(ST_Collect(t.geom))) AS lat,
             CASE
-                WHEN sw.id IS NOT NULL THEN 'sun'
-                WHEN sw_soon.id IS NOT NULL THEN 'soon'
+                WHEN MAX(CASE WHEN sw.id IS NOT NULL THEN 1 ELSE 0 END) = 1 THEN 'sun'
+                WHEN MAX(CASE WHEN sw_soon.id IS NOT NULL THEN 1 ELSE 0 END) = 1 THEN 'soon'
                 ELSE 'shadow'
             END AS sun_status,
-            sw_soon.start_time AS sun_at
+            MIN(sw_soon.start_time) AS sun_at
         FROM places p
         LEFT JOIN terraces t ON t.place_id = p.id
         LEFT JOIN sun_windows sw ON sw.terrace_id = t.id
@@ -42,12 +45,12 @@ def list_places(
             AND sw_soon.start_time > :t
             AND sw_soon.start_time <= :t + interval '60 minutes'
         WHERE p.active = true
-        GROUP BY p.id, p.name, p.slug, p.category, p.address, p.url,
-                 sw.id, sw_soon.id, sw_soon.start_time
+            AND (:cat IS NULL OR p.category = :cat)
+        GROUP BY p.id, p.name, p.slug, p.category, p.address, p.url
         ORDER BY sun_status, p.name
     """)
 
-    rows = db.execute(sql, {"d": current_date, "t": current_time}).mappings().all()
+    rows = db.execute(sql, {"d": current_date, "t": current_time, "cat": category}).mappings().all()
     return [dict(r) for r in rows]
 
 

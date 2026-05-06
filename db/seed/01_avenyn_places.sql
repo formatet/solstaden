@@ -9,11 +9,39 @@ INSERT INTO places (name, slug, category, address, url) VALUES
   ('Smaka', 'smaka', 'restaurant', 'Vasaplatsen 3', 'https://smaka.se')
 ON CONFLICT (slug) DO NOTHING;
 
--- Uteserveringsyta (förenklad rektangel) per plats
--- Koordinater: [lon, lat] i WGS84
+-- Uteserveringsytor (förenklade rektanglar) per plats
+-- Koordinater: [lon, lat] i WGS84, ~20×20 m approximationer
 INSERT INTO terraces (place_id, geom)
 SELECT id, ST_GeomFromText(
   'POLYGON((11.9746 57.7007, 11.9750 57.7007, 11.9750 57.7010, 11.9746 57.7010, 11.9746 57.7007))',
   4326)
 FROM places WHERE slug = 'heaven-23'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO terraces (place_id, geom)
+SELECT id, ST_GeomFromText(
+  'POLYGON((11.9638 57.7044, 11.9642 57.7044, 11.9642 57.7046, 11.9638 57.7046, 11.9638 57.7044))',
+  4326)
+FROM places WHERE slug = 'brewers-beer-bar'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO terraces (place_id, geom)
+SELECT id, ST_GeomFromText(
+  'POLYGON((11.9606 57.7062, 11.9610 57.7062, 11.9610 57.7064, 11.9606 57.7064, 11.9606 57.7062))',
+  4326)
+FROM places WHERE slug = 'cafe-husaren'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO terraces (place_id, geom)
+SELECT id, ST_GeomFromText(
+  'POLYGON((11.9488 57.6999, 11.9492 57.6999, 11.9492 57.7001, 11.9488 57.7001, 11.9488 57.6999))',
+  4326)
+FROM places WHERE slug = 'olhallen-7an'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO terraces (place_id, geom)
+SELECT id, ST_GeomFromText(
+  'POLYGON((11.9637 57.7094, 11.9641 57.7094, 11.9641 57.7096, 11.9637 57.7096, 11.9637 57.7094))',
+  4326)
+FROM places WHERE slug = 'smaka'
 ON CONFLICT DO NOTHING;

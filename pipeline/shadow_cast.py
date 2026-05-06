@@ -48,10 +48,15 @@ def compute_sun_fraction(terrace_geom_wgs84: Polygon,
 
     shadows = []
     for b in buildings:
-        bpoly_sw = _transform_poly(b["geom"], _to_sweref)
-        shadow = project_shadow(bpoly_sw, b["height_m"], sun_azimuth, sun_altitude)
-        if shadow:
-            shadows.append(shadow)
+        bgeom = b["geom"]
+        polys = list(bgeom.geoms) if hasattr(bgeom, "geoms") else [bgeom]
+        for poly in polys:
+            if poly.geom_type != "Polygon":
+                continue
+            bpoly_sw = _transform_poly(poly, _to_sweref)
+            shadow = project_shadow(bpoly_sw, b["height_m"], sun_azimuth, sun_altitude)
+            if shadow:
+                shadows.append(shadow)
 
     if not shadows:
         return 1.0
