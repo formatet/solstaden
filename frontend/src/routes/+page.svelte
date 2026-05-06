@@ -31,9 +31,10 @@
   function sunOrder(s) { return { sun:0, soon:1, shadow:2 }[s] ?? 2; }
 
   function filtered() {
+    const q = search.toLowerCase();
     let result = places.filter(p => {
       if (category !== 'all' && p.category !== category) return false;
-      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (q && !p.name.toLowerCase().includes(q) && !(p.address?.toLowerCase().includes(q))) return false;
       return true;
     });
     if (sortBy === 'distance' && userPos) {
@@ -180,9 +181,17 @@
             {:else}
               <p>☁️ Skugga för tillfället vid den valda tidpunkten.</p>
             {/if}
-            {#if p.url}
-              <a href={p.url} target="_blank" rel="noopener" onclick={(e)=>{e.stopPropagation()}}>Webbplats ↗</a>
-            {/if}
+            <div class="detail-links" onclick={(e)=>e.stopPropagation()}>
+              {#if p.lat && p.lng}
+                {@const osmUrl = p.osm_id
+                  ? `https://www.openstreetmap.org/node/${p.osm_id}`
+                  : `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}&zoom=19`}
+                <a href={osmUrl} target="_blank" rel="noopener">🗺 Hitta hit</a>
+              {/if}
+              {#if p.url}
+                <a href={p.url} target="_blank" rel="noopener">🌐 Webbplats</a>
+              {/if}
+            </div>
           </div>
         {/if}
       </div>
@@ -340,7 +349,9 @@
     font-size:0.83rem; color:#546e7a;
   }
   .card-detail p { margin:0 0 0.3rem; }
-  .card-detail a { color:#e67e22; font-weight:600; text-decoration:none; }
+  .detail-links { display:flex; gap:0.75rem; margin-top:0.25rem; }
+  .card-detail a { color:#e67e22; font-weight:600; text-decoration:none; font-size:0.82rem; }
+  .card-detail a:hover { text-decoration:underline; }
 
   footer {
     text-align:center; padding:1rem;

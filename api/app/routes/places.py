@@ -26,6 +26,7 @@ def list_places(
             p.category,
             p.address,
             p.url,
+            p.osm_id,
             MIN(t.id) AS terrace_id,
             ST_X(ST_Centroid(ST_Collect(t.geom))) AS lng,
             ST_Y(ST_Centroid(ST_Collect(t.geom))) AS lat,
@@ -46,7 +47,7 @@ def list_places(
             AND sw_soon.start_time <= :t + interval '60 minutes'
         WHERE p.active = true
             AND (:cat IS NULL OR p.category = :cat)
-        GROUP BY p.id, p.name, p.slug, p.category, p.address, p.url
+        GROUP BY p.id, p.name, p.slug, p.category, p.address, p.url, p.osm_id
         ORDER BY sun_status, p.name
     """)
 
