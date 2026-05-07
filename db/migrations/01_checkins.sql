@@ -6,3 +6,5 @@ CREATE TABLE IF NOT EXISTS checkins (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS checkins_place_recent ON checkins (place_id, created_at DESC);
+GRANT INSERT, SELECT ON checkins TO solstaden;
+GRANT USAGE, SELECT ON SEQUENCE checkins_id_seq TO solstaden;
