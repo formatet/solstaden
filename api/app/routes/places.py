@@ -1,5 +1,5 @@
-from datetime import datetime, date
-from fastapi import APIRouter, Depends, Query
+from datetime import datetime
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -9,6 +9,7 @@ router = APIRouter()
 
 @router.get("")
 def list_places(
+    response: Response,
     time: datetime = Query(default=None, description="ISO8601, default=now"),
     area: str = Query(default=None),
     category: str = Query(default=None),
@@ -35,7 +36,13 @@ def list_places(
                 WHEN MAX(CASE WHEN sw_soon.id IS NOT NULL THEN 1 ELSE 0 END) = 1 THEN 'soon'
                 ELSE 'shadow'
             END AS sun_status,
-            MIN(sw_soon.start_time) AS sun_at
+            MIN(sw_soon.start_time) AS sun_at,
+            (
+                SELECT COUNT(*) > 0
+                FROM sun_windows sw2
+                JOIN terraces t2 ON t2.id = sw2.terrace_id
+                WHERE t2.place_id = p.id AND sw2.date = :d
+            ) AS has_data
         FROM places p
         LEFT JOIN terraces t ON t.place_id = p.id
         LEFT JOIN sun_windows sw ON sw.terrace_id = t.id
@@ -52,6 +59,7 @@ def list_places(
     """)
 
     rows = db.execute(sql, {"d": current_date, "t": current_time, "cat": category}).mappings().all()
+    response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=30"
     return [dict(r) for r in rows]
 
 

@@ -141,7 +141,9 @@
             </span>
           </div>
           <div class="badge-wrap">
-            {#if p.sun_status === 'sun'}
+            {#if !p.has_data}
+              <span class="badge badge-unknown">?</span>
+            {:else if p.sun_status === 'sun'}
               <span class="badge badge-sun">Sol nu! ☀</span>
             {:else if p.sun_status === 'soon'}
               <span class="badge badge-soon">kl {fmtTime(p.sun_at)}</span>
@@ -253,9 +255,10 @@
   .meta { display:block; font-size:0.74rem; color:#90a4ae; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px; }
   .badge-wrap { flex-shrink:0; }
   .badge { display:inline-block; border-radius:999px; padding:0.25rem 0.65rem; font-size:0.75rem; font-weight:700; }
-  .badge-sun    { background:#fff3cd; color:#b37a00; }
-  .badge-soon   { background:#e8f5e9; color:#2e7d32; }
-  .badge-shadow { background:#eceff1; color:#90a4ae; }
+  .badge-sun     { background:#fff3cd; color:#b37a00; }
+  .badge-soon    { background:#e8f5e9; color:#2e7d32; }
+  .badge-shadow  { background:#eceff1; color:#90a4ae; }
+  .badge-unknown { background:#f5f5f5; color:#bdbdbd; font-style:italic; }
 
   .card-detail { margin-top:0.65rem; padding-top:0.65rem; border-top:1px solid #f0f4f8; font-size:0.83rem; color:#546e7a; }
   .card-detail p { margin:0 0 0.3rem; }

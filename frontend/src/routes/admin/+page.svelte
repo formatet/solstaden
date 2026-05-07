@@ -268,8 +268,9 @@
       }
     });
 
+    // Dubbelklick avslutar ritning på desktop (tas bort på touch-enheter)
     map.on('dblclick', e => {
-      if (mode !== 'draw') return;
+      if (mode !== 'draw' || isTouchDevice()) return;
       e.preventDefault();
       if (vertices.length > 3) vertices = vertices.slice(0, -1);
       saveTerrace();
@@ -277,6 +278,10 @@
   });
 
   $effect(() => { if (map?.loaded()) renderMarkers(); });
+
+  function isTouchDevice() {
+    return navigator.maxTouchPoints > 0;
+  }
 </script>
 
 <div class="admin">
@@ -364,15 +369,22 @@
           {#if selected.address}<span class="addr">{selected.address}</span>{/if}
 
           {#if mode === 'draw'}
-            <p class="hint-draw">Klicka för hörn. Dubbelklicka = spara.</p>
-            <p class="vtx">{vertices.length} {vertices.length === 1 ? 'punkt' : 'punkter'}</p>
-            <div class="btn-row">
-              <button onclick={undoVertex} disabled={!vertices.length}>↩</button>
-              <button onclick={cancelDraw}>Avbryt</button>
-              <button class="save" onclick={saveTerrace} disabled={vertices.length < 3 || saving}>
-                {saving ? '…' : 'Spara'}
-              </button>
+            <p class="hint-draw">
+              Tryck på kartan för varje hörn av terrassen.
+              {#if !isTouchDevice()}Dubbelklicka eller {/if}tryck "Klar" när du är nöjd.
+            </p>
+            <div class="vtx-row">
+              <span class="vtx">{vertices.length} hörn</span>
+              <button class="undo-btn" onclick={undoVertex} disabled={!vertices.length} title="Ångra senaste hörn">↩ Ångra</button>
             </div>
+            <button
+              class="finish-btn"
+              onclick={saveTerrace}
+              disabled={vertices.length < 3 || saving}
+            >
+              {saving ? '…' : '✓ Klar – spara terrass'}
+            </button>
+            <button class="cancel-small" onclick={cancelDraw}>Avbryt</button>
           {:else}
             <button class="draw-btn" onclick={startDraw}>
               {selected.terrace_geom ? '✎ Rita om terrass' : '+ Rita terrass'}
@@ -445,7 +457,23 @@
   .addr { font-size:0.78rem; color:#666; }
   .coord-ok { margin:0; font-size:0.75rem; color:#27ae60; font-weight:600; }
   .hint-draw { margin:0.2rem 0; font-size:0.78rem; color:#555; line-height:1.4; }
-  .vtx { margin:0; font-size:0.8rem; font-weight:600; color:#27ae60; }
+  .vtx-row { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
+  .vtx { font-size:0.85rem; font-weight:700; color:#27ae60; }
+  .undo-btn {
+    background:#fff3cd; border:1px solid #f5c518; border-radius:6px;
+    padding:0.3rem 0.6rem; font-size:0.8rem; cursor:pointer;
+  }
+  .undo-btn:disabled { opacity:0.4; }
+  .finish-btn {
+    width:100%; background:#27ae60; color:#fff; border:none; border-radius:8px;
+    padding:0.65rem; font-size:0.95rem; font-weight:700; cursor:pointer;
+    margin-top:0.25rem; min-height:44px;
+  }
+  .finish-btn:disabled { background:#aaa; cursor:default; }
+  .cancel-small {
+    width:100%; background:none; border:1px solid #eee; border-radius:6px;
+    padding:0.35rem; font-size:0.8rem; color:#aaa; cursor:pointer; margin-top:0.25rem;
+  }
   label { display:flex; flex-direction:column; font-size:0.75rem; color:#555; gap:2px; }
   label input, label select {
     border:1px solid #ddd; border-radius:4px; padding:0.25rem 0.4rem;
