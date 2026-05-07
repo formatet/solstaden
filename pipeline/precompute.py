@@ -16,7 +16,7 @@ from shapely.geometry import shape
 from solar_position import solar_position
 from shadow_cast import compute_sun_fraction
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://solstaden:solstaden@localhost:5432/solstaden")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://solstaden@localhost:5432/solstaden")
 NTFY_TOPIC   = os.getenv("NTFY_TOPIC", "")
 GBGLAT, GBGLON = 57.7089, 11.9746
 TIME_STEP_MINUTES = 15

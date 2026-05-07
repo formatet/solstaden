@@ -13,7 +13,7 @@ import urllib.request
 
 import psycopg2
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://solstaden:solstaden@localhost:5432/solstaden")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://solstaden@localhost:5432/solstaden")
 
 # Göteborg innerstad: Avenyn, Vasastan, Linné, Magasinsgatan, Järntorget
 DEFAULT_BBOX = (11.93, 57.69, 12.00, 57.72)

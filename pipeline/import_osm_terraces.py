@@ -14,7 +14,7 @@ import urllib.request
 
 import psycopg2
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://solstaden:solstaden@localhost:5432/solstaden")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://solstaden@localhost:5432/solstaden")
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 SEARCH_RADIUS = 80   # meter runt venues koordinater
 
@@ -74,7 +74,7 @@ def fetch_places(conn):
                    ST_X(ST_Centroid(t.geom)) AS lng
             FROM places p
             JOIN terraces t ON t.place_id = p.id
-            WHERE p.active = TRUE
+            WHERE p.status = 'active'
         """)
         return cur.fetchall()
 
