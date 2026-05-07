@@ -26,27 +26,21 @@
   }
   function fmtTime(t) { return t ? String(t).slice(0,5) : ''; }
   function sunOrder(p) {
-    if (p.is_open === false) return 10;   // stängda sist alltid
     return { sun:0, soon:1, shadow:2 }[p.sun_status] ?? 2;
   }
 
   function filtered() {
     const q = search.toLowerCase();
     let result = places.filter(p =>
-      !q || p.name.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q)
+      p.is_open !== false &&
+      (!q || p.name.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q))
     );
     if (sortBy === 'distance' && userPos) {
       result = result
         .map(p => ({ ...p, dist: p.lat && p.lng ? haversine(userPos.lat, userPos.lng, p.lat, p.lng) : Infinity }))
-        .sort((a,b) => {
-          const closed = (a.is_open===false ? 1:0) - (b.is_open===false ? 1:0);
-          return closed || a.dist - b.dist;
-        });
+        .sort((a,b) => a.dist - b.dist);
     } else if (sortBy === 'alpha') {
-      result = [...result].sort((a,b) => {
-        const closed = (a.is_open===false ? 1:0) - (b.is_open===false ? 1:0);
-        return closed || a.name.localeCompare(b.name,'sv');
-      });
+      result = [...result].sort((a,b) => a.name.localeCompare(b.name,'sv'));
     } else {
       result = [...result].sort((a,b) => sunOrder(a) - sunOrder(b) || a.name.localeCompare(b.name,'sv'));
     }
@@ -150,9 +144,7 @@
             </span>
           </div>
           <div class="badge-wrap">
-            {#if p.is_open === false}
-              <span class="badge badge-closed">Stängt</span>
-            {:else if !p.has_data}
+            {#if !p.has_data}
               <span class="badge badge-unknown">?</span>
             {:else if p.sun_status === 'sun'}
               <span class="badge badge-sun">Sol nu! ☀</span>
