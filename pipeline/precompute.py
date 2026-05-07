@@ -6,6 +6,8 @@ Beräknar solfönster för alla uteserveringar och sparar i sun_windows-tabellen
 """
 import argparse
 import os
+import urllib.request
+import urllib.parse
 from datetime import date, datetime, timedelta, timezone
 
 import psycopg2
@@ -15,9 +17,29 @@ from solar_position import solar_position
 from shadow_cast import compute_sun_fraction
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://solstaden:solstaden@localhost:5432/solstaden")
+NTFY_TOPIC   = os.getenv("NTFY_TOPIC", "")
 GBGLAT, GBGLON = 57.7089, 11.9746
 TIME_STEP_MINUTES = 15
 SUN_THRESHOLD = 0.3   # minst 30% solbelyst = "sol"
+
+
+def send_ntfy(title: str, message: str, priority: str = "default"):
+    if not NTFY_TOPIC:
+        return
+    try:
+        req = urllib.request.Request(
+            f"https://ntfy.sh/{NTFY_TOPIC}",
+            data=message.encode("utf-8"),
+            headers={
+                "Title": urllib.parse.quote(title),
+                "Priority": priority,
+            },
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=8)
+        print(f"  📱 ntfy skickat: {title}")
+    except Exception as e:
+        print(f"  ⚠️  ntfy misslyckades: {e}")
 
 
 def fetch_terraces(conn):
@@ -89,31 +111,56 @@ def compute_day(conn, terrace_id, terrace_geom, buildings, target_date: date):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", default=str(date.today()))
-    parser.add_argument("--end", default=str(date.today()))
+    parser.add_argument("--end",   default=str(date.today()))
     parser.add_argument("--step-days", type=int, default=1)
     args = parser.parse_args()
 
     start = date.fromisoformat(args.start)
-    end = date.fromisoformat(args.end)
+    end   = date.fromisoformat(args.end)
 
-    conn = psycopg2.connect(DATABASE_URL)
-    terraces = fetch_terraces(conn)
-    print(f"Beräknar {len(terraces)} uteserveringar, {args.start} → {args.end}, steg {args.step_days} dag(ar)")
+    errors = []
+    total_windows = 0
 
-    d = start
-    while d <= end:
-        for tid, tgeom in terraces:
-            geom_shape = shape(tgeom)
-            bounds = geom_shape.bounds   # minx, miny, maxx, maxy
-            # Utöka bbox med 500m i grader ≈ 0.005
-            bbox = (bounds[0]-0.005, bounds[1]-0.005, bounds[2]+0.005, bounds[3]+0.005)
-            buildings = fetch_buildings(conn, bbox)
-            n = compute_day(conn, tid, tgeom, buildings, d)
-            print(f"  {d} terrace={tid}: {n} fönster")
-        d += timedelta(days=args.step_days)
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        terraces = fetch_terraces(conn)
+        print(f"Beräknar {len(terraces)} uteserveringar, {args.start} → {args.end}, steg {args.step_days} dag(ar)")
 
-    conn.close()
-    print("Klart.")
+        d = start
+        while d <= end:
+            for tid, tgeom in terraces:
+                try:
+                    geom_shape = shape(tgeom)
+                    bounds = geom_shape.bounds
+                    bbox = (bounds[0]-0.005, bounds[1]-0.005, bounds[2]+0.005, bounds[3]+0.005)
+                    buildings = fetch_buildings(conn, bbox)
+                    n = compute_day(conn, tid, tgeom, buildings, d)
+                    total_windows += n
+                    print(f"  {d} terrace={tid}: {n} fönster")
+                except Exception as e:
+                    errors.append(f"{d} terrace={tid}: {e}")
+                    print(f"  ⚠️  {d} terrace={tid} FAILED: {e}")
+            d += timedelta(days=args.step_days)
+
+        conn.close()
+
+        days = (end - start).days + 1
+        if errors:
+            send_ntfy(
+                f"⚠️ Solstaden precompute – {len(errors)} fel",
+                f"{len(terraces)} terrasser, {days} dagar, {total_windows} fönster.\nFel:\n" + "\n".join(errors[:5]),
+                priority="high",
+            )
+        else:
+            send_ntfy(
+                f"✅ Solstaden precompute klar",
+                f"{len(terraces)} terrasser × {days} dagar → {total_windows} solfönster.",
+            )
+        print("Klart.")
+
+    except Exception as e:
+        send_ntfy("🔴 Solstaden precompute kraschade", str(e), priority="urgent")
+        raise
 
 
 if __name__ == "__main__":
