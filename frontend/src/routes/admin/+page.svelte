@@ -168,11 +168,19 @@
   }
 
   async function toggleActive(p) {
+    const next = p.status === 'active' ? 'inactive' : 'active';
     await fetch(`/api/admin/places/${p.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ active: !p.active })
+      body: JSON.stringify({ status: next })
     });
+    await load();
+    refreshAllTerraces();
+    renderMarkers();
+  }
+
+  async function approvePlace(p) {
+    await fetch(`/api/admin/places/${p.id}/approve`, { method: 'POST' });
     await load();
     refreshAllTerraces();
     renderMarkers();
@@ -290,16 +298,29 @@
 
     <button class="add-btn" onclick={startAddVenue}>+ Ny krog</button>
 
+    {#if places.filter(p => p.status === 'pending').length > 0}
+      <div class="pending-header">
+        ⏳ {places.filter(p => p.status === 'pending').length} väntande förslag
+      </div>
+      {#each places.filter(p => p.status === 'pending') as p}
+        <div class="pending-item">
+          <button class="pending-name" onclick={() => selectPlace(p)}>{p.name}</button>
+          <button class="approve-btn" onclick={() => approvePlace(p)}>✓ Godkänn</button>
+        </div>
+      {/each}
+      <hr class="divider" />
+    {/if}
+
     <ul class="place-list">
-      {#each places as p}
-        <li class:selected={selected?.id === p.id} class:inactive={!p.active}>
+      {#each places.filter(p => p.status !== 'pending') as p}
+        <li class:selected={selected?.id === p.id} class:inactive={p.status !== 'active'}>
           <button onclick={() => selectPlace(p)}>
-            <span class="dot" style="background:{selected?.id===p.id ? '#e74c3c' : p.active ? '#3498db' : '#aaa'}"></span>
+            <span class="dot" style="background:{selected?.id===p.id ? '#e74c3c' : p.status==='active' ? '#3498db' : '#aaa'}"></span>
             <span class="name">{p.name}</span>
             {#if p.terrace_geom}<span class="badge" title="Har terrass">▦</span>{/if}
           </button>
-          <button class="tog" onclick={() => toggleActive(p)} title={p.active ? 'Inaktivera' : 'Aktivera'}>
-            {p.active ? '●' : '○'}
+          <button class="tog" onclick={() => toggleActive(p)} title={p.status === 'active' ? 'Inaktivera' : 'Aktivera'}>
+            {p.status === 'active' ? '●' : '○'}
           </button>
         </li>
       {/each}
@@ -417,6 +438,11 @@
     display:flex; flex-direction:column; gap:0.5rem;
   }
   h2 { margin:0; font-size:0.95rem; color:#fff; }
+  .pending-header { font-size:0.75rem; color:#f39c12; font-weight:700; padding:0.3rem 0; text-transform:uppercase; letter-spacing:0.05em; }
+  .pending-item { display:flex; align-items:center; gap:0.3rem; margin-bottom:2px; }
+  .pending-name { flex:1; background:rgba(243,156,18,0.15); border:1px solid #f39c12; border-radius:4px; color:#f39c12; cursor:pointer; padding:0.3rem 0.4rem; font-size:0.78rem; text-align:left; }
+  .approve-btn { background:#27ae60; color:#fff; border:none; border-radius:4px; padding:0.3rem 0.5rem; font-size:0.75rem; cursor:pointer; white-space:nowrap; }
+  .divider { border:none; border-top:1px solid #2a2a4a; margin:0.5rem 0; }
   .add-btn {
     background:#27ae60; color:#fff; border:none; border-radius:5px;
     padding:0.4rem 0.75rem; cursor:pointer; font-size:0.82rem; text-align:left;

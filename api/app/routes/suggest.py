@@ -48,8 +48,8 @@ def suggest_place(body: SuggestIn, request: Request, db: Session = Depends(get_d
 
     try:
         row = db.execute(text("""
-            INSERT INTO places (name, slug, category, address, active, approved, submitted_by)
-            VALUES (:name, :slug, :category, :address, FALSE, FALSE, 'friend')
+            INSERT INTO places (name, slug, category, address, status, submitted_by)
+            VALUES (:name, :slug, :category, :address, 'pending', 'friend')
             RETURNING id, name, slug
         """), {
             "name": body.name, "slug": slug, "category": body.category,

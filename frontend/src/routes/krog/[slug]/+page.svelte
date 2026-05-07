@@ -37,6 +37,21 @@
     }
   }
 
+  async function share() {
+    const statusText = place.sun_status === 'sun' ? '☀ Sol nu på' : 'Kolla';
+    const shareData = {
+      title: place.name,
+      text: `${statusText} ${place.name}${place.address ? ' – ' + place.address : ''}`,
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch {}
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      alert('Länk kopierad!');
+    }
+  }
+
   async function checkIn(status) {
     if (!place) return;
     await fetch('/api/checkin', {
@@ -138,8 +153,9 @@
         {/if}
       </section>
 
-      <!-- Navigera dit + webb -->
+      <!-- Navigera dit + webb + dela -->
       <section class="links">
+        <button class="link-btn share-btn" onclick={share}>📤 Dela</button>
         {#if place.lat && place.lng}
           {@const osmUrl = place.osm_id
             ? `https://www.openstreetmap.org/node/${place.osm_id}`
@@ -228,6 +244,7 @@
     flex:1; text-align:center; border-radius:10px; padding:0.65rem;
     text-decoration:none; font-weight:600; font-size:0.9rem;
   }
-  .map-btn { background:#e3f2fd; color:#0277bd; }
-  .web-btn { background:#f3e5f5; color:#6a1b9a; }
+  .share-btn { background:#fff3cd; color:#b37a00; border:none; cursor:pointer; font-family:inherit; }
+  .map-btn   { background:#e3f2fd; color:#0277bd; }
+  .web-btn   { background:#f3e5f5; color:#6a1b9a; }
 </style>

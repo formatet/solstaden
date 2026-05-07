@@ -11,7 +11,6 @@ router = APIRouter()
 def list_places(
     response: Response,
     time: datetime = Query(default=None, description="ISO8601, default=now"),
-    area: str = Query(default=None),
     category: str = Query(default=None),
     db: Session = Depends(get_db),
 ):
@@ -64,7 +63,7 @@ def list_places(
             AND sw_soon.date = :d
             AND sw_soon.start_time > :t
             AND sw_soon.start_time <= :t + interval '60 minutes'
-        WHERE p.active = true
+        WHERE p.status = 'active'
             AND (:cat IS NULL OR p.category = :cat)
         GROUP BY p.id, p.name, p.slug, p.category, p.address, p.url, p.osm_id
         ORDER BY sun_status, p.name
