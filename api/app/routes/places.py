@@ -42,7 +42,19 @@ def list_places(
                 FROM sun_windows sw2
                 JOIN terraces t2 ON t2.id = sw2.terrace_id
                 WHERE t2.place_id = p.id AND sw2.date = :d
-            ) AS has_data
+            ) AS has_data,
+            (
+                SELECT COALESCE(SUM(CASE WHEN c.status = 'sun' THEN 1 ELSE 0 END), 0)
+                FROM checkins c
+                WHERE c.place_id = p.id
+                  AND c.created_at > NOW() - INTERVAL '30 minutes'
+            ) AS live_sun,
+            (
+                SELECT COALESCE(SUM(CASE WHEN c.status = 'shadow' THEN 1 ELSE 0 END), 0)
+                FROM checkins c
+                WHERE c.place_id = p.id
+                  AND c.created_at > NOW() - INTERVAL '30 minutes'
+            ) AS live_shadow
         FROM places p
         LEFT JOIN terraces t ON t.place_id = p.id
         LEFT JOIN sun_windows sw ON sw.terrace_id = t.id

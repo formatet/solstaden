@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from ..database import get_db
+from ..ratelimit import check as rate_check
 
 router = APIRouter()
 
@@ -16,7 +17,9 @@ class CheckInIn(BaseModel):
 
 
 @router.post("", status_code=201)
-def post_checkin(body: CheckInIn, db: Session = Depends(get_db)):
+def post_checkin(body: CheckInIn, request: Request, db: Session = Depends(get_db)):
+    # Max 5 check-ins per venue per IP per 30 min
+    rate_check(request, f"checkin:{body.place_id}", max_calls=5, window_seconds=1800)
     if body.status not in ("sun", "shadow"):
         raise HTTPException(400, "status måste vara 'sun' eller 'shadow'")
 

@@ -3,13 +3,14 @@
 Förslag sparas med active=FALSE, approved=FALSE, submitted_by='friend'.
 Synliga i /admin under "Väntande förslag" tills en admin godkänner dem.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 import re, unicodedata
 from ..database import get_db
+from ..ratelimit import check as rate_check
 
 router = APIRouter()
 
@@ -29,7 +30,9 @@ def slugify(name: str) -> str:
 
 
 @router.post("", status_code=201)
-def suggest_place(body: SuggestIn, db: Session = Depends(get_db)):
+def suggest_place(body: SuggestIn, request: Request, db: Session = Depends(get_db)):
+    # Max 3 förslag per IP per timme
+    rate_check(request, "suggest", max_calls=3, window_seconds=3600)
     if body.category not in ('bar', 'cafe', 'restaurant'):
         raise HTTPException(status_code=422, detail="category måste vara bar, cafe eller restaurant")
 

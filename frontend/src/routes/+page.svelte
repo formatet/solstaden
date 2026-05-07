@@ -150,6 +150,12 @@
             {:else}
               <span class="badge badge-shadow">Skugga</span>
             {/if}
+            {#if (p.live_sun + p.live_shadow) >= 2}
+              {@const liveIsSun = p.live_sun >= p.live_shadow}
+              <span class="badge badge-live" title="Live-rapporter senaste 30 min">
+                {liveIsSun ? '☀' : '☁'} {p.live_sun + p.live_shadow}
+              </span>
+            {/if}
           </div>
         </div>
 
@@ -259,6 +265,7 @@
   .badge-soon    { background:#e8f5e9; color:#2e7d32; }
   .badge-shadow  { background:#eceff1; color:#90a4ae; }
   .badge-unknown { background:#f5f5f5; color:#bdbdbd; font-style:italic; }
+  .badge-live    { background:#e8f5e9; color:#2e7d32; font-weight:800; margin-left:2px; }
 
   .card-detail { margin-top:0.65rem; padding-top:0.65rem; border-top:1px solid #f0f4f8; font-size:0.83rem; color:#546e7a; }
   .card-detail p { margin:0 0 0.3rem; }
