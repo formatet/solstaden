@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from app.routes import places, sun, admin, suggest, weather
+from app.routes import places, sun, admin, suggest, weather, checkin
 import os
 from pathlib import Path
 
@@ -21,6 +21,7 @@ app.include_router(sun.router, prefix="/api/sun", tags=["sun"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(suggest.router, prefix="/api/suggest", tags=["suggest"])
 app.include_router(weather.router, prefix="/api/weather", tags=["weather"])
+app.include_router(checkin.router, prefix="/api/checkin", tags=["checkin"])
 
 
 @app.get("/health")

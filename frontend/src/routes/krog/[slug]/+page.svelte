@@ -6,37 +6,48 @@
   const slug = $derived($page.params.slug);
   let place = $state(null);
   let windows = $state([]);
-  let checkInStatus = $state(null);  // 'sun' | 'shadow' | null
   let checkInSent = $state(false);
+  let liveData = $state(null);   // { sun, shadow, total, live_status }
   let weather = $state(null);
   const now = new Date();
 
   function fmtTime(t) { return t ? String(t).slice(0, 5) : ''; }
+  function minsAgo(ts) {
+    if (!ts) return '';
+    const m = Math.round((Date.now() - new Date(ts)) / 60000);
+    return m < 1 ? 'just nu' : `${m} min sedan`;
+  }
 
   async function load() {
-    // Hämta platsen via slug ur listan
-    const res = await fetch(`/api/places`);
+    const res = await fetch('/api/places');
     const all = await res.json();
     place = all.find(p => p.slug === slug) ?? null;
 
-    if (place?.terrace_id) {
-      const d = now.toISOString().split('T')[0];
-      const wr = await fetch(`/api/sun/${place.terrace_id}/windows?d=${d}`);
-      const data = await wr.json();
-      windows = data.windows ?? [];
+    if (place) {
+      const [winRes, liveRes, wxRes] = await Promise.all([
+        place.terrace_id
+          ? fetch(`/api/sun/${place.terrace_id}/windows?d=${now.toISOString().split('T')[0]}`)
+          : null,
+        fetch(`/api/checkin/${place.id}`),
+        fetch('/api/weather'),
+      ]);
+      if (winRes) { const d = await winRes.json(); windows = d.windows ?? []; }
+      liveData = await liveRes.json();
+      try { weather = await wxRes.json(); } catch {}
     }
-
-    try {
-      const wr2 = await fetch('/api/weather');
-      weather = await wr2.json();
-    } catch {}
   }
 
   async function checkIn(status) {
-    checkInStatus = status;
+    if (!place) return;
+    await fetch('/api/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ place_id: place.id, status }),
+    });
     checkInSent = true;
-    // TODO: POST /api/checkin när det är implementerat
-    // För nu: visuell feedback
+    // Uppdatera live-data
+    const r = await fetch(`/api/checkin/${place.id}`);
+    liveData = await r.json();
   }
 
   onMount(load);
@@ -95,18 +106,34 @@
         <p class="no-windows">Inga förberäknade solfönster för idag.</p>
       {/if}
 
+      <!-- Live check-ins -->
+      {#if liveData && liveData.total >= 1}
+        <section class="live">
+          <h2>Live – senaste 30 min</h2>
+          <div class="live-row">
+            <span class="live-vote sun-vote">☀ {liveData.sun} sol</span>
+            <span class="live-vote shadow-vote">☁ {liveData.shadow} skugga</span>
+            {#if liveData.live_status}
+              <span class="live-verdict {liveData.live_status}">
+                → {liveData.live_status === 'sun' ? '☀ Sol bekräftad' : '☁ Skugga bekräftad'}
+              </span>
+            {/if}
+          </div>
+          <p class="live-time">Senast rapporterat {minsAgo(liveData.latest)}</p>
+        </section>
+      {/if}
+
       <!-- Check-in -->
       <section class="checkin">
         <h2>Sitter du här?</h2>
         {#if checkInSent}
-          <p class="checkin-thanks">
-            Tack! Du rapporterade {checkInStatus === 'sun' ? '☀ sol' : '☁ skugga'}.
-          </p>
+          <p class="checkin-thanks">Tack för rapporten! ☀</p>
+          <p class="checkin-sub">Hjälp oss bli bättre – rapportera igen om en halvtimme.</p>
         {:else}
           <p class="checkin-hint">Hjälp andra – berätta hur det faktiskt är just nu!</p>
           <div class="checkin-btns">
-            <button class="btn-sun"   onclick={() => checkIn('sun')}>☀ Det är sol!</button>
-            <button class="btn-shadow" onclick={() => checkIn('shadow')}>☁ Det är skugga</button>
+            <button class="btn-sun"    onclick={() => checkIn('sun')}>☀ Sol!</button>
+            <button class="btn-shadow" onclick={() => checkIn('shadow')}>☁ Skugga</button>
           </div>
         {/if}
       </section>
@@ -175,6 +202,14 @@
   .wpct { font-size:0.8rem; color:#90a4ae; }
   .no-windows { text-align:center; color:#90a4ae; padding:0.5rem; font-size:0.85rem; }
 
+  .live-row { display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; margin-bottom:0.3rem; }
+  .live-vote { border-radius:999px; padding:0.25rem 0.75rem; font-size:0.82rem; font-weight:600; }
+  .sun-vote    { background:#fff3cd; color:#b37a00; }
+  .shadow-vote { background:#eceff1; color:#546e7a; }
+  .live-verdict { font-size:0.82rem; font-weight:700; }
+  .live-verdict.sun    { color:#b37a00; }
+  .live-verdict.shadow { color:#546e7a; }
+  .live-time { margin:0; font-size:0.75rem; color:#b0bec5; }
   .checkin-hint { margin:0 0 0.75rem; font-size:0.85rem; color:#546e7a; }
   .checkin-btns { display:flex; gap:0.5rem; }
   .btn-sun, .btn-shadow {
@@ -185,7 +220,8 @@
   .btn-shadow { background:#eceff1; color:#546e7a; }
   .btn-sun:hover    { background:#ffe082; }
   .btn-shadow:hover { background:#cfd8dc; }
-  .checkin-thanks { color:#2e7d32; font-weight:600; margin:0; }
+  .checkin-thanks { color:#2e7d32; font-weight:600; margin:0 0 0.25rem; }
+  .checkin-sub { margin:0; font-size:0.78rem; color:#90a4ae; }
 
   .links { display:flex; gap:0.5rem; background:none; box-shadow:none; padding:0; }
   .link-btn {
