@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from ..database import get_db
+from ..opening_hours import is_open as oh_is_open
 
 router = APIRouter()
 
@@ -53,7 +54,8 @@ def list_places(
                 FROM checkins c
                 WHERE c.place_id = p.id
                   AND c.created_at > NOW() - INTERVAL '30 minutes'
-            ) AS live_shadow
+            ) AS live_shadow,
+            p.opening_hours
         FROM places p
         LEFT JOIN terraces t ON t.place_id = p.id
         LEFT JOIN sun_windows sw ON sw.terrace_id = t.id
@@ -65,13 +67,29 @@ def list_places(
             AND sw_soon.start_time <= :t + interval '60 minutes'
         WHERE p.status = 'active'
             AND (:cat IS NULL OR p.category = :cat)
-        GROUP BY p.id, p.name, p.slug, p.category, p.address, p.url, p.osm_id
+        GROUP BY p.id, p.name, p.slug, p.category, p.address, p.url, p.osm_id,
+                 p.opening_hours
         ORDER BY sun_status, p.name
     """)
 
     rows = db.execute(sql, {"d": current_date, "t": current_time, "cat": category}).mappings().all()
+
+    result = []
+    for r in rows:
+        d = dict(r)
+        open_state = oh_is_open(d.get("opening_hours"), dt)
+        d["is_open"] = open_state   # True, False, or None (okänt)
+        result.append(d)
+
+    # Sortera: öppna krogar först, stängda sist (bevarar sun/soon/shadow-ordning inom varje grupp)
+    result.sort(key=lambda p: (
+        0 if p["is_open"] is not False else 1,
+        {"sun": 0, "soon": 1, "shadow": 2}.get(p["sun_status"], 2),
+        p["name"],
+    ))
+
     response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=30"
-    return [dict(r) for r in rows]
+    return result
 
 
 @router.get("/{place_id}")

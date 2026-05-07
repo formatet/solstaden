@@ -25,7 +25,10 @@
     return m < 1000 ? `${Math.round(m/10)*10} m` : `${(m/1000).toFixed(1)} km`;
   }
   function fmtTime(t) { return t ? String(t).slice(0,5) : ''; }
-  function sunOrder(s) { return { sun:0, soon:1, shadow:2 }[s] ?? 2; }
+  function sunOrder(p) {
+    if (p.is_open === false) return 10;   // stängda sist alltid
+    return { sun:0, soon:1, shadow:2 }[p.sun_status] ?? 2;
+  }
 
   function filtered() {
     const q = search.toLowerCase();
@@ -35,11 +38,17 @@
     if (sortBy === 'distance' && userPos) {
       result = result
         .map(p => ({ ...p, dist: p.lat && p.lng ? haversine(userPos.lat, userPos.lng, p.lat, p.lng) : Infinity }))
-        .sort((a,b) => a.dist - b.dist);
+        .sort((a,b) => {
+          const closed = (a.is_open===false ? 1:0) - (b.is_open===false ? 1:0);
+          return closed || a.dist - b.dist;
+        });
     } else if (sortBy === 'alpha') {
-      result = [...result].sort((a,b) => a.name.localeCompare(b.name,'sv'));
+      result = [...result].sort((a,b) => {
+        const closed = (a.is_open===false ? 1:0) - (b.is_open===false ? 1:0);
+        return closed || a.name.localeCompare(b.name,'sv');
+      });
     } else {
-      result = [...result].sort((a,b) => sunOrder(a.sun_status)-sunOrder(b.sun_status) || a.name.localeCompare(b.name,'sv'));
+      result = [...result].sort((a,b) => sunOrder(a) - sunOrder(b) || a.name.localeCompare(b.name,'sv'));
     }
     return result;
   }
@@ -141,7 +150,9 @@
             </span>
           </div>
           <div class="badge-wrap">
-            {#if !p.has_data}
+            {#if p.is_open === false}
+              <span class="badge badge-closed">Stängt</span>
+            {:else if !p.has_data}
               <span class="badge badge-unknown">?</span>
             {:else if p.sun_status === 'sun'}
               <span class="badge badge-sun">Sol nu! ☀</span>
@@ -265,6 +276,7 @@
   .badge-soon    { background:#e8f5e9; color:#2e7d32; }
   .badge-shadow  { background:#eceff1; color:#90a4ae; }
   .badge-unknown { background:#f5f5f5; color:#bdbdbd; font-style:italic; }
+  .badge-closed  { background:#eceff1; color:#78909c; font-style:italic; }
   .badge-live    { background:#e8f5e9; color:#2e7d32; font-weight:800; margin-left:2px; }
 
   .card-detail { margin-top:0.65rem; padding-top:0.65rem; border-top:1px solid #f0f4f8; font-size:0.83rem; color:#546e7a; }

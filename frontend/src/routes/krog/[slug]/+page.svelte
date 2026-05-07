@@ -100,6 +100,14 @@
         </div>
       </div>
 
+      {#if place.is_open === false}
+        <div class="closed-note">🔒 Stängt just nu
+          {#if place.opening_hours}<span class="oh-str">({place.opening_hours})</span>{/if}
+        </div>
+      {:else if place.opening_hours}
+        <div class="open-note">🕐 {place.opening_hours}</div>
+      {/if}
+
       {#if weather?.cloudy}
         <div class="weather-note">⛅ {weather.description} – soldata är teoretisk</div>
       {/if}
@@ -204,6 +212,9 @@
   .status-hero.shadow .status-label { color:#78909c; }
   .address { margin:0; font-size:0.82rem; color:#90a4ae; }
 
+  .closed-note { background:#ffebee; border-radius:8px; padding:0.4rem 0.75rem; font-size:0.82rem; color:#c62828; margin-bottom:0.5rem; font-weight:600; }
+  .open-note   { background:#f1f8e9; border-radius:8px; padding:0.4rem 0.75rem; font-size:0.78rem; color:#558b2f; margin-bottom:0.5rem; }
+  .oh-str { font-weight:400; font-size:0.75rem; }
   .weather-note {
     background:rgba(255,255,255,0.7); border-radius:8px; padding:0.4rem 0.75rem;
     font-size:0.8rem; color:#546e7a; margin-bottom:0.5rem; text-align:center;
