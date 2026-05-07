@@ -134,7 +134,7 @@
             {p.sun_status === 'sun' ? '☀️' : p.sun_status === 'soon' ? '🌤' : '☁️'}
           </div>
           <div class="info">
-            <span class="name">{p.name}</span>
+            <a href="/krog/{p.slug}" class="name" onclick={(e)=>e.stopPropagation()}>{p.name}</a>
             <span class="meta">
               {#if p.address}{p.address}{/if}
               {#if p.dist != null && sortBy==='distance'} · <strong>{fmtDist(p.dist)}</strong>{/if}
@@ -248,7 +248,8 @@
   .sun-bubble.shadow { background:#eceff1; }
 
   .info { flex:1; min-width:0; }
-  .name { display:block; font-weight:700; font-size:0.97rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .name { display:block; font-weight:700; font-size:0.97rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:inherit; text-decoration:none; }
+  .name:hover { text-decoration:underline; }
   .meta { display:block; font-size:0.74rem; color:#90a4ae; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px; }
   .badge-wrap { flex-shrink:0; }
   .badge { display:inline-block; border-radius:999px; padding:0.25rem 0.65rem; font-size:0.75rem; font-weight:700; }
