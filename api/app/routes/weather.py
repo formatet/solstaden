@@ -1,70 +1,70 @@
 """
-Väderinfo för Göteborg via SMHI öppet API.
-Cachar resultatet 30 min för att inte hammra SMHI.
+Väderinfo för Göteborg via Open-Meteo (gratis, ingen API-nyckel).
+Cachar 30 min för att inte hammra tjänsten.
 """
 import time
 import urllib.request
 import json
 
-router_cache = {"ts": 0, "data": None}
-CACHE_TTL = 1800  # 30 min
-
-GBG_LON, GBG_LAT = 11.97, 57.70
-SMHI_URL = (
-    f"https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2"
-    f"/geotype/point/lon/{GBG_LON}/lat/{GBG_LAT}/data.json"
-)
-
 from fastapi import APIRouter
 router = APIRouter()
 
+_cache = {"ts": 0, "data": None}
+CACHE_TTL = 1800  # 30 min
 
-def _fetch_smhi():
+GBG_LAT, GBG_LON = 57.7089, 11.9746
+OPEN_METEO_URL = (
+    f"https://api.open-meteo.com/v1/forecast"
+    f"?latitude={GBG_LAT}&longitude={GBG_LON}"
+    f"&current=cloud_cover,weather_code&forecast_days=1"
+)
+
+# WMO weather codes → svenska etiketter
+WMO_LABELS = {
+    0: "Klart",
+    1: "Nästan klart", 2: "Halvmulet", 3: "Mulet",
+    45: "Dimma", 48: "Ishalka",
+    51: "Duggregn", 53: "Duggregn", 55: "Duggregn",
+    61: "Lätt regn", 63: "Regn", 65: "Kraftigt regn",
+    71: "Lätt snö", 73: "Snö", 75: "Kraftig snö",
+    80: "Regnskurar", 81: "Regnskurar", 82: "Kraftiga skurar",
+    95: "Åska", 96: "Åska med hagel", 99: "Åska med hagel",
+}
+
+
+def _fetch():
     req = urllib.request.Request(
-        SMHI_URL,
+        OPEN_METEO_URL,
         headers={"User-Agent": "solstaden/1.0 (formatet.se)"},
     )
     with urllib.request.urlopen(req, timeout=8) as resp:
         return json.loads(resp.read())
 
 
-def _parse(data) -> dict:
-    """Hämtar närmaste tidssteg och tolkar molnighet."""
-    series = data.get("timeSeries", [])
-    if not series:
-        return {"cloudy": False, "symbol": 1, "description": "Okänt"}
-
-    # Ta närmaste tidssteg (index 0)
-    params = {p["name"]: p["values"][0] for p in series[0].get("parameters", [])}
-
-    wsymb = int(params.get("Wsymb2", 1))
-    tcc   = params.get("tcc_mean", 0)  # 0–8 oktas
-
-    # Wsymb2: 1–2 = klar, 3–5 = halvmulet, 6+ = mulet/regn
-    cloudy = wsymb >= 6 or tcc >= 6
-
-    labels = {
-        1: "Klart", 2: "Lätt molnigt", 3: "Halvmulet",
-        4: "Halvmulet", 5: "Molnigt", 6: "Mulet",
-        7: "Dimma",
-    }
-    desc = labels.get(wsymb, "Regnigt" if wsymb > 7 else "Mulet")
-
-    return {"cloudy": cloudy, "symbol": wsymb, "tcc": tcc, "description": desc}
-
-
 @router.get("")
 def weather():
     now = time.time()
-    if now - router_cache["ts"] < CACHE_TTL and router_cache["data"]:
-        return router_cache["data"]
+    if now - _cache["ts"] < CACHE_TTL and _cache["data"]:
+        return _cache["data"]
 
     try:
-        raw = _fetch_smhi()
-        result = _parse(raw)
-    except Exception as e:
-        result = {"cloudy": False, "symbol": 0, "description": "Okänt", "error": str(e)}
+        raw = _fetch()
+        current = raw["current"]
+        cloud = int(current.get("cloud_cover", 0))
+        code = int(current.get("weather_code", 0))
 
-    router_cache["ts"] = now
-    router_cache["data"] = result
+        cloudy = cloud >= 70 or code >= 45
+        label = WMO_LABELS.get(code, "Mulet" if cloudy else "Klart")
+
+        result = {
+            "cloudy": cloudy,
+            "cloud_cover": cloud,
+            "weather_code": code,
+            "description": label,
+        }
+    except Exception as e:
+        result = {"cloudy": False, "cloud_cover": None, "description": "Okänt", "error": str(e)}
+
+    _cache["ts"] = now
+    _cache["data"] = result
     return result
